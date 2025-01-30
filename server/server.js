@@ -4,6 +4,8 @@ const express = require('express'); // Importa express
 const logger = require('./src/middlewares/logger'); // Importa middleware-ul personalizat pentru logging
 const morgan = require('morgan'); // Importa morgan pentru logging
 
+const { db } = require("./src/config/firebase"); // Importă conexiunea Firestore
+
 const app = express(); // Creeaza aplicatia express
 const PORT = process.env.PORT || 3000; // Portul este preluat din variabilele de mediu 
 
@@ -17,6 +19,23 @@ app.use(morgan('dev')); // Middleware-ul morgan pentru logging avansat
 app.get('/', (req, res) => {
     res.send('Server is running');
 });
+
+// Rută pentru a testa conexiunea la Firestore
+app.get('/test-firestore', async (req, res) => {
+    try {
+        // Creează un document de test în Firestore
+        const testDoc = await db.collection('test').add({
+            message: "Hello from Firestore!",
+            timestamp: new Date().toISOString()
+        });
+
+        res.status(200).json({ success: true, docId: testDoc.id });
+    } catch (error) {
+        console.error("Error connecting to Firestore:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 
 // Pornirea serverului 
 app.listen(PORT, () => {
