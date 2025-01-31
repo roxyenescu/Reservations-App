@@ -21,7 +21,7 @@
 
 <script setup>
 import { ref } from "vue";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, getIdToken } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { useRouter } from "vue-router";
 
@@ -34,8 +34,17 @@ const router = useRouter();
 
 const handleLogin = async () => {
     try {
-        await signInWithEmailAndPassword(auth, email.value, password.value);
-        router.push("/reservations"); // Redirectionare dupa login
+        const userCredential = await signInWithEmailAndPassword(auth, email.value, password.value);
+        const user = userCredential.user;
+
+        // Obtin token-ul ID generat de Firebase
+        const token = await user.getIdToken();
+
+        // Salvez token-ul ID in LocalStorage
+        localStorage.setItem("authToken", token);
+
+        // Redirectionare dupa login
+        router.push("/reservations"); 
 
     } catch (error) {
         errorMessage.value = "Eroare la autentificare: " + error.message;

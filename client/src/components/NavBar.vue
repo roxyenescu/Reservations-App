@@ -27,10 +27,18 @@ onMounted(() => {
     onAuthStateChanged(auth, (currentUser) => {
         user.value = currentUser;
     });
+
+    // Verific localStorage pentru un token salvat
+    const token = localStorage.getItem("authToken");
+    if (token) {
+        user.value = { email: localStorage.getItem("userEmail") };
+    }
 });
 
 const logout = async () => {
     await signOut(auth);
+    localStorage.removeItem("authToken"); // Sterg token-ul
+    user.value = null;
     router.push("/login");
 };
 </script>
