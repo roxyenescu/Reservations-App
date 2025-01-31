@@ -5,6 +5,7 @@ const logger = require('./src/middlewares/logger'); // Importa middleware-ul per
 const morgan = require('morgan'); // Importa morgan pentru logging
 
 const { db } = require("./src/config/firebase"); // Importa conexiunea Firestore
+const authRoutes = require("./src/routes/auth"); // Importa rutele autentificarii
 const reservationsRoutes = require("./src/routes/reservations"); // Importa rutele rezervarilor
 const tablesRoutes = require("./src/routes/tables"); // Importa rutele meselor
 
@@ -39,6 +40,7 @@ app.get('/test-firestore', async (req, res) => {
 });
 
 // Rutele de rezervare
+app.use("/auth", authRoutes);
 app.use("/reservations", reservationsRoutes);
 app.use("/tables", tablesRoutes);
 

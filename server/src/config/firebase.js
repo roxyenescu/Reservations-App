@@ -19,5 +19,8 @@ admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
 
+// Export auth pentru autentificare si db pentru baza de date Firestore
+const auth = admin.auth();
 const db = admin.firestore();
-module.exports = { db };
+
+module.exports = { auth, db };
