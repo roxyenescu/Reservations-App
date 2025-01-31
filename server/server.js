@@ -5,6 +5,7 @@ const logger = require('./src/middlewares/logger'); // Importa middleware-ul per
 const morgan = require('morgan'); // Importa morgan pentru logging
 
 const { db } = require("./src/config/firebase"); // Importă conexiunea Firestore
+const reservationsRoutes = require("./src/routes/reservations"); // Importă rutele rezervărilor
 
 const app = express(); // Creeaza aplicatia express
 const PORT = process.env.PORT || 3000; // Portul este preluat din variabilele de mediu 
@@ -35,6 +36,9 @@ app.get('/test-firestore', async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
+// Rutele de rezervare
+app.use("/reservations", reservationsRoutes);
 
 
 // Pornirea serverului 
