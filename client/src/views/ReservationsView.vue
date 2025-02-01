@@ -39,28 +39,18 @@
                 </div>
             </li>
         </ul>
-        <!-- <ul v-else class="reservation-list">
-            <li v-for="reservation in reservations" :key="reservation.id">
-                {{ reservation.name }}:
-                {{ reservation.date }} la {{ reservation.time }} |
-                Masa {{ reservation.table }} | {{ reservation.peopleCount }} persoane
-
-                <button @click="editReservation(reservation)">Editează</button>
-                <button @click="deleteReservation(reservation.id)">Anuleaza</button>
-            </li>
-        </ul> -->
 
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { auth } from "../config/firebase";
-import { useRouter } from "vue-router";
+import { ref, computed, onMounted } from "vue";
+import { useStore } from "vuex";
 
-const router = useRouter();
+const store = useStore();
 
-const reservations = ref([]);
+// Accesez rezervarile
+const reservations = computed(() => store.getters.allReservations);
 
 const isEditing = ref(false);
 const editingId = ref(null);
@@ -74,150 +64,48 @@ const newReservation = ref({
     phoneNumber: ""
 });
 
-// Functie pentru a prelua rezervarile din backend
-const fetchReservations = async () => {
-    try {
-        const user = auth.currentUser;
-        if (!user) {
-            console.error("Utilizator neautentificat!");
-            return;
-        }
+// La montarea componentei, preiau rezervarile deja existente
+onMounted(() => {
+    store.dispatch("fetchReservations");
+});
 
-        const token = await user.getIdToken();
-
-        const response = await fetch("http://localhost:3000/reservations", {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Eroare: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        reservations.value = data;
-    } catch (error) {
-        console.error("Eroare la preluarea rezervărilor:", error);
-    }
-};
-
-// Apelez funcția 'fetchReservations()'' imediat ce componenta se incarca ca sa apara toate rezervarile existente
-onMounted(fetchReservations);
-
-// Functie pentru a adauga o noua rezervare
+// Functie pentru a adauga o rezervare
 const addReservation = async () => {
-    try {
-        const user = auth.currentUser;
-        if (!user) {
-            console.error("Utilizator neautentificat!");
-            return;
-        }
-
-        // Obtin token-ul Firebase
-        const token = await user.getIdToken();
-
-        const response = await fetch("http://localhost:3000/reservations", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}` // Adaug token-ul in request
-            },
-            body: JSON.stringify(newReservation.value)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Eroare: ${response.statusText}`);
-        }
-
-        // Reimprospatez lista de rezervari
-        fetchReservations();
-        newReservation.value = { name: "", date: "", time: "", table: "", peopleCount: "", phoneNumber: "" };
-
-    } catch (error) {
-        console.error("Eroare la adăugarea rezervării:", error);
-    }
-
+    await store.dispatch("addReservation", newReservation.value);
+    await store.dispatch("fetchReservations"); // Reimprospatez lista dupa ce se adauga o noua rezervare 
+    resetForm();
 };
 
-// Functie pentru a sterge / anula o rezervare
+// Functie pentru a sterge o rezervare
 const deleteReservation = async (id) => {
-    try {
-        const user = auth.currentUser;
-        if (!user) {
-            console.error("Utilizator neautentificat!");
-            return;
-        }
-
-        const token = await user.getIdToken();
-
-        const response = await fetch(`http://localhost:3000/reservations/${id}`, {
-            method: "DELETE",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Eroare: ${response.statusText}`);
-        }
-
-        // Actualizez lista de rezervari dupa stergere
-        reservations.value = reservations.value.filter(reservation => reservation.id !== id);
-
-    } catch (error) {
-        console.error("Eroare la stergerea rezervarii:", error);
-    }
+    await store.dispatch("deleteReservation", id);
 };
 
-
-// Functie pentru a edita o rezervare (populează formularul)
+// Functie pentru a incepe editarea unei rezervări
 const editReservation = (reservation) => {
     isEditing.value = true;
     editingId.value = reservation.id;
     newReservation.value = { ...reservation };
 };
 
-// Functie pentru a anula editarea
-const cancelEdit = () => {
-    isEditing.value = false;
-    editingId.value = null;
-    newReservation.value = { name: "", date: "", time: "", table: "", peopleCount: "", phoneNumber: "" };
-};
-
 // Functie pentru a actualiza o rezervare
 const updateReservation = async () => {
-    try {
-        const user = auth.currentUser;
-        if (!user) {
-            console.error("Utilizator neautentificat!");
-            return;
-        }
+    await store.dispatch("updateReservation", newReservation.value);
+    resetForm();
+};
 
-        const token = await user.getIdToken();
-
-        const response = await fetch(`http://localhost:3000/reservations/${editingId.value}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(newReservation.value)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Eroare: ${response.statusText}`);
-        }
-
-        fetchReservations();
-        cancelEdit();
-
-    } catch (error) {
-        console.error("Eroare la actualizarea rezervării:", error);
-    }
+// Functie pentru a reseta formularul
+const resetForm = () => {
+    isEditing.value = false;
+    editingId.value = null;
+    newReservation.value = {
+        name: "",
+        date: "",
+        time: "",
+        table: "",
+        peopleCount: "",
+        phoneNumber: ""
+    };
 };
 </script>
 
@@ -272,7 +160,7 @@ const updateReservation = async () => {
 
 .button-container {
     display: flex;
-    gap: 10px; 
+    gap: 10px;
 }
 
 button {
@@ -291,12 +179,11 @@ button {
 }
 
 .delete-btn {
-    background-color: #ff4d4d; 
+    background-color: #ff4d4d;
 }
 
 button:hover {
     opacity: 0.8;
     background-color: darkred;
 }
-
 </style>
