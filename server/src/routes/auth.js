@@ -1,9 +1,10 @@
 const express = require("express");
 const { auth } = require("../config/firebase");
+const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-// Înregistrare utilizator
+// Inregistrare utilizator
 router.post("/register", async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -22,14 +23,20 @@ router.post("/login", async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await auth.getUserByEmail(email);
-        res.status(200).json({ message: "Autentificare reusita!", userId: user.uid });
+
+        res.status(200).json({ 
+            message: "Autentificare reusita!", 
+            userId: user.uid,
+        });
     } catch (error) {
         res.status(401).json({ error: "Eroare la autentificare!", details: error.message });
     }
 });
 
-// Logout (in frontend se sterge token-ul)
-router.post("/logout", (req, res) => {
+// Logout 
+// -> in frontend se sterge token-ul
+// -> doar utilizatorii autentificati pot face Logout
+router.post("/logout", authMiddleware, (req, res) => {
     res.status(200).json({ message: "Deconectare reusita!" });
 });
 

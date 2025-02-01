@@ -1,10 +1,11 @@
 const express = require("express");
 const { db } = require("../config/firebase");
+const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-// Adaugarea unei mese
-router.post("/", async (req, res) => {
+// Adaugarea unei mese (protejat)
+router.post("/", authMiddleware, async (req, res) => {
     try {
         const { tableNumber, seats } = req.body;
 
@@ -20,6 +21,7 @@ router.post("/", async (req, res) => {
         const docRef = await db.collection("tables").add({
             tableNumber,
             seats,
+            createdBy: req.user.uid, // Adaug ID-ul utilizatorului care a creat masa
             createdAt: new Date().toISOString(),
         });
 
@@ -29,8 +31,8 @@ router.post("/", async (req, res) => {
     }
 });
 
-// Obtinerea tuturor meselor
-router.get("/", async (req, res) => {
+// Obtinerea tuturor meselor (protejat)
+router.get("/", authMiddleware, async (req, res) => {
     try {
         const snapshot = await db.collection("tables").get();
         const tables = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -40,8 +42,8 @@ router.get("/", async (req, res) => {
     }
 });
 
-// Actualizarea unei mese
-router.put("/:id", async (req, res) => {
+// Actualizarea unei mese (protejat)
+router.put("/:id", authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
         const { tableNumber, seats } = req.body;
@@ -49,8 +51,8 @@ router.put("/:id", async (req, res) => {
         const tableRef = db.collection("tables").doc(id);
         const doc = await tableRef.get();
 
-        if (!doc.exists) {
-            return res.status(404).json({ error: "Masa nu a fost gasita!" });
+        if (!doc.exists || doc.data().createdBy !== req.user.uid) {
+            return res.status(404).json({ error: "Masa nu a fost gasita sau nu apartine utilizatorului!" });
         }
 
         await tableRef.update({
@@ -65,15 +67,15 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-// Stergerea unei mese
-router.delete("/:id", async (req, res) => {
+// Stergerea unei mese (protejat)
+router.delete("/:id", authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
         const tableRef = db.collection("tables").doc(id);
         const doc = await tableRef.get();
 
-        if (!doc.exists) {
-            return res.status(404).json({ error: "Masa nu a fost gasita!" });
+        if (!doc.exists || doc.data().createdBy !== req.user.uid) {
+            return res.status(404).json({ error: "Masa nu a fost gasita sau nu apartine utilizatorului!" });
         }
 
         await tableRef.delete();
