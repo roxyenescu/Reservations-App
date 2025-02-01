@@ -1,15 +1,15 @@
 <template>
     <nav class="navbar">
         <div class="nav-left">
-            <router-link class="nav-item" v-if="!user" to="/">Home</router-link>
-            <router-link class="nav-item" v-if="user" to="/reservations">Reservations</router-link>
-            <router-link class="nav-item" v-if="user" to="/tables">Tables</router-link>
+            <router-link class="nav-item" v-if="!user" to="/">Acasa</router-link>
+            <router-link class="nav-item" v-if="user" to="/reservations">Rezervari</router-link>
+            <router-link class="nav-item" v-if="user" to="/tables">Mese</router-link>
         </div>
 
         <div class="nav-right">
-            <router-link class="nav-item" v-if="!user" to="/login">Login</router-link>
-            <router-link class="nav-item" v-if="!user" to="/register">Register</router-link>
-            <a class="nav-item" v-if="user" @click="logout">Logout</a>
+            <router-link class="nav-item" v-if="!user" to="/login">Autentificare</router-link>
+            <router-link class="nav-item" v-if="!user" to="/register">Inregistrare</router-link>
+            <a class="nav-item" v-if="user" @click="logout">Delogare</a>
         </div>
     </nav>
 </template>

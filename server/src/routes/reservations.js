@@ -8,6 +8,7 @@ const router = express.Router();
 router.post("/", authMiddleware, async (req, res) => {
     try {
         const { name, date, time, table, peopleCount, phoneNumber } = req.body;
+        
         const docRef = await db.collection("reservations").add({
             userId: req.user.uid, // Asociez rezervarea cu utilizatorul autenticat
             name,

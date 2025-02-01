@@ -1,16 +1,25 @@
 require('dotenv').config(); // Importa variabilele de mediu
 
 const express = require('express'); // Importa express
+const cors = require("cors"); // Importa cors
 const logger = require('./src/middlewares/logger'); // Importa middleware-ul personalizat pentru logging
 const morgan = require('morgan'); // Importa morgan pentru logging
 
 const { db } = require("./src/config/firebase"); // Importa conexiunea Firestore
+
 const authRoutes = require("./src/routes/auth"); // Importa rutele autentificarii
 const reservationsRoutes = require("./src/routes/reservations"); // Importa rutele rezervarilor
 const tablesRoutes = require("./src/routes/tables"); // Importa rutele meselor
 
 const app = express(); // Creeaza aplicatia express
 const PORT = process.env.PORT || 3000; // Portul este preluat din variabilele de mediu 
+
+// Configurare CORS - permite cereri de la frontend
+app.use(cors({
+    origin: "http://localhost:5173", // Permite cereri din frontend
+    methods: "GET,POST,PUT,DELETE",
+    allowedHeaders: "Content-Type,Authorization"
+}));
 
 // Middleware-uri esentiale
 app.use(express.json()); // Procesare JSON
