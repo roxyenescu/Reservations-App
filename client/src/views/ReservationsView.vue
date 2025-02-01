@@ -112,7 +112,7 @@ const resetForm = () => {
 <style scoped>
 .reservations-container {
     max-width: 800px;
-    margin: auto;
+    margin: 50px auto;
     text-align: center;
     background: white;
     padding: 50px;
@@ -120,9 +120,8 @@ const resetForm = () => {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 
     position: absolute;
-    top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%);
 }
 
 .reservation-form input {
