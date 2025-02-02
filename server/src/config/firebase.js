@@ -1,7 +1,6 @@
 var admin = require("firebase-admin");
 const dotenv = require("dotenv");
-
-dotenv.config(); // Încarcă variabilele din .env
+dotenv.config(); // Incarca variabilele din .env
 
 const serviceAccount = {
     type: "service_account",
