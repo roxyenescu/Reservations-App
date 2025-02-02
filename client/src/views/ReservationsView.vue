@@ -19,13 +19,19 @@
 
         <h2>Rezervari restaurant:</h2>
 
-        <div v-if="reservations.length === 0" class="no-reservations">
+        <!-- Butoane pentru filtrare -->
+        <div class="filter-buttons">
+            <button @click="filterType = 'all'">Toate rezervarile</button>
+            <button @click="filterType = 'today'">Rezervarile de astazi</button>
+        </div>
+
+        <div v-if="filteredReservations.length === 0" class="no-reservations">
             <p>Nu exista rezervari inca.</p>
         </div>
 
         <!-- Lista rezervarilor -->
         <ul v-else class="reservation-list">
-            <li v-for="reservation in reservations" :key="reservation.id">
+            <li v-for="reservation in filteredReservations" :key="reservation.id">
                 <span>
                     {{ reservation.name }}:
                     {{ reservation.date }} la {{ reservation.time }} |
@@ -52,6 +58,19 @@ const store = useStore();
 // Accesez rezervarile
 const reservations = computed(() => store.getters.allReservations);
 
+// Inițial, apar toate rezervarile
+const filterType = ref("all");
+
+// Filtrare rezervari pe baza 'filterType'
+const filteredReservations = computed(() => {
+    if (filterType.value === "today") {
+        // Obtin data de azi in format YYYY-MM-DD
+        const today = new Date().toISOString().split("T")[0];
+        return reservations.value.filter(reservation => reservation.date === today);
+    }
+    return reservations.value;
+});
+
 const isEditing = ref(false);
 const editingId = ref(null);
 
@@ -72,7 +91,10 @@ onMounted(() => {
 // Functie pentru a adauga o rezervare
 const addReservation = async () => {
     await store.dispatch("addReservation", newReservation.value);
-    await store.dispatch("fetchReservations"); // Reimprospatez lista dupa ce se adauga o noua rezervare 
+
+    // Reimprospatez lista dupa ce se adauga o noua rezervare 
+    await store.dispatch("fetchReservations");
+
     resetForm();
 };
 
@@ -141,6 +163,28 @@ const resetForm = () => {
     justify-content: center;
     gap: 10px;
     margin-top: 15px;
+}
+
+.filter-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.filter-buttons button {
+    background-color: #2c3e50;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.filter-buttons button:hover {
+    background-color: #368f6a;
 }
 
 .reservation-list li {
