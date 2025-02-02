@@ -105,7 +105,8 @@ const addTable = async () => {
     if (!validateForm()) return;
 
     await store.dispatch("addTable", newTable.value);
-    await store.dispatch("fetchTables");
+    await store.dispatch("fetchTables"); // Actualizez lista meselor
+    await store.dispatch("fetchReservations"); // Actualizez lista rezervarilor
 
     resetForm();
 };
@@ -120,6 +121,8 @@ const openModal = (id) => {
 const confirmDelete = async () => {
     if (tableToDelete.value) {
         await store.dispatch("deleteTable", tableToDelete.value);
+        await store.dispatch("fetchTables"); // Actualizez lista meselor
+        await store.dispatch("fetchReservations"); // Actualizez lista rezervarilor
     }
     showModal.value = false;
 };

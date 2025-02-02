@@ -244,7 +244,14 @@ const store = createStore({
     },
     getters: {
         allReservations: (state) => state.reservations,
-        allTables: (state) => state.tables
+        allTables: (state) => state.tables,
+
+        allFormatedTables: (state) => {
+            return state.tables.map(table => ({
+                id: table.id,
+                name: `Masa ${table.tableNumber} - ${table.seats} locuri`
+            }));
+        }
     }
 });
 

@@ -10,7 +10,7 @@
 
             <input type="time" v-model="newReservation.time" required />
 
-            <select v-model="newReservation.table" required @change="validatePeopleCount">
+            <select v-model="newReservation.table" required>
                 <option disabled value="">Alege o masa...</option>
                 <option v-for="table in availableTables" :key="table.id" :value="table.name">
                     {{ table.name }}
@@ -52,7 +52,7 @@
                 <span>
                     {{ reservation.name }}:
                     {{ reservation.date }} la {{ reservation.time }} |
-                    Masa {{ reservation.table }} | {{ reservation.peopleCount }} persoane
+                    {{ reservation.table }} | {{ reservation.peopleCount }} persoane
                 </span>
 
                 <!-- Container pentru butoane -->
@@ -103,7 +103,7 @@ const filteredReservations = computed(() => {
 });
 
 // Filtrare dupa nume
-// ->  Daca o rezervare nu are nume definit, ea este ignorata în cautare, evitand astfel crash-ul aplicatiei.
+// ->  Daca o rezervare nu are nume definit, ea este ignorata in cautare, evitand astfel crash-ul aplicatiei.
 const searchedReservations = computed(() => {
     return filteredReservations.value.filter(reservation =>
         reservation?.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -113,22 +113,32 @@ const searchedReservations = computed(() => {
 // Se calculeaza mesele disponibile in functie de data si ora selectata
 const availableTables = computed(() => {
     if (!newReservation.value.date || !newReservation.value.time) {
-        // Daca nu s-a selectat inca o data si o ora, se returneaza toate mesele
+         // Daca nu s-a selectat inca o data si o ora, se returneaza toate mesele
         return tables.value;
     }
 
-    return tables.value.filter(table => {
+    let filteredTables = tables.value.filter(table => {
         // Se verifica daca aceasta masa este deja rezervata pentru data si ora selectata
         const isTaken = reservations.value.some(reservation =>
             reservation.date === newReservation.value.date &&
             reservation.time === newReservation.value.time &&
-            reservation.table === table.name
+            table.name.includes(reservation.table)
         );
 
-        // Include doar mesele care NU sunt rezervate in acel interval
         return !isTaken;
     });
+
+    // Se adauga manual masa rezervarii in cazul in care suntem in cazul de editare
+    if (isEditing.value) {
+        const currentTable = tables.value.find(t => t.name === newReservation.value.table);
+        if (currentTable && !filteredTables.includes(currentTable)) {
+            filteredTables.push(currentTable);
+        }
+    }
+
+    return filteredTables;
 });
+
 
 // Se deschide modalul si se stocheaza rezervarea care trebuie stearsa
 const openModal = (id) => {
@@ -156,17 +166,12 @@ const newReservation = ref({
     phoneNumber: ""
 });
 
-const tables = ref([]);
+// Preiau mesele din store
+const tables = computed(() => store.getters.allFormatedTables);
 
 onMounted(() => {
-    // La montarea componentei, se preiau rezervarile deja existente
-    store.dispatch("fetchReservations");
-
-    // Se genereaza mesele automat: primele 10 mese au 2 locuri, urmatoarele 10 au 4 locuri, urmatoarele 5 au 6 locuri ultimele 5 au 8 locuri
-    tables.value = Array.from({ length: 30 }, (_, i) => {
-        const seats = i < 10 ? 2 : i < 20 ? 4 : i < 25 ? 6 : 8;
-        return { id: i + 1, name: `nr ${i + 1} - ${seats} locuri` };
-    });
+    store.dispatch("fetchReservations"); // Preiau reservarile existente din Vuex
+    store.dispatch("fetchTables"); // Preiau mesele existente din Vuex
 });
 
 
@@ -218,16 +223,35 @@ const addReservation = async () => {
     resetForm();
 };
 
-// Functie pentru a incepe editarea unei rezervări
+// Functie pentru a incepe editarea unei rezervari
 const editReservation = (reservation) => {
     isEditing.value = true;
     editingId.value = reservation.id;
-    newReservation.value = { ...reservation };
+
+    // Se gaseste masa selectata in rezervare
+    const selectedTable = tables.value.find(table => table.name.includes(reservation.table));
+
+    newReservation.value = {
+        name: reservation.name,
+        date: reservation.date,
+        time: reservation.time,
+        table: selectedTable ? selectedTable.name : reservation.table, // Se asigura ca apare in field
+        peopleCount: reservation.peopleCount,
+        phoneNumber: reservation.phoneNumber
+    };
+
+    console.log("Masa setată:", newReservation.value.table);
 };
+
 
 // Functie pentru a actualiza o rezervare
 const updateReservation = async () => {
     await store.dispatch("updateReservation", newReservation.value);
+    resetForm();
+};
+
+// Functie pentru a anula editarea
+const cancelEdit = () => {
     resetForm();
 };
 
