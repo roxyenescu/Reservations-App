@@ -8,7 +8,7 @@
             <input type="time" v-model="newReservation.time" required />
             <select v-model="newReservation.table" required>
                 <option disabled value="">Alege o masa...</option>
-                <option v-for="table in tables" :key="table.id" :value="table.name">
+                <option v-for="table in availableTables" :key="table.id" :value="table.name">
                     {{ table.name }}
                 </option>
             </select>
@@ -101,6 +101,26 @@ const searchedReservations = computed(() => {
     );
 });
 
+// Se calculeaza mesele disponibile îin funcțtie de data si ora selectata
+const availableTables = computed(() => {
+    if (!newReservation.value.date || !newReservation.value.time) {
+        // Daca nu s-a selectat inca o data si o ora, se returneaza toate mesele
+        return tables.value;
+    }
+
+    return tables.value.filter(table => {
+        // Se verifica daca aceasta masa este deja rezervata pentru data si ora selectata
+        const isTaken = reservations.value.some(reservation =>
+            reservation.date === newReservation.value.date &&
+            reservation.time === newReservation.value.time &&
+            reservation.table === table.name
+        );
+
+        // Include doar mesele care NU sunt rezervate in acel interval
+        return !isTaken;
+    });
+});
+
 // Se deschide modalul si se stocheaza rezervarea care trebuie stearsa
 const openModal = (id) => {
     reservationToDelete.value = id;
@@ -133,7 +153,7 @@ onMounted(() => {
     // La montarea componentei, preiau rezervarile deja existente
     store.dispatch("fetchReservations");
 
-    // Se genereaza mesele automat: primele 10 mese au 2 locuri, urmatoarele 10 au 4 locuri, ultimele 10 au 6 locuri
+    // Se genereaza mesele automat: primele 10 mese au 2 locuri, urmatoarele 10 au 4 locuri, urmatoarele 5 au 6 locuri ultimele 5 au 8 locuri
     tables.value = Array.from({ length: 30 }, (_, i) => {
         const seats = i < 10 ? 2 : i < 20 ? 4 : i < 25 ? 6 : 8;
         return { id: i + 1, name: `nr ${i + 1} - ${seats} locuri` };
@@ -199,7 +219,8 @@ defineExpose({
     transform: translate(-50%);
 }
 
-.reservation-form input, select {
+.reservation-form input,
+select {
     display: block;
     width: 100%;
     padding: 10px;
