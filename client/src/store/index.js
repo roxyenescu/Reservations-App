@@ -3,7 +3,8 @@ import { auth } from '../config/firebase';
 
 const store = createStore({
     state: {
-        reservations: []
+        reservations: [],
+        tables: []
     },
     mutations: {
         setReservations(state, reservations) {
@@ -20,6 +21,15 @@ const store = createStore({
             if (index !== -1) {
                 state.reservations[index] = updatedReservation;
             }
+        },
+        setTables(state, tables) {
+            state.tables = tables || [];
+        },
+        addTable(state, table) {
+            state.tables.push(table);
+        },
+        deleteTable(state, id) {
+            state.tables = state.tables.filter(res => res.id !== id);
         }
     },
     actions: {
@@ -53,6 +63,37 @@ const store = createStore({
             }
         },
 
+        async fetchTables({ commit }) {
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    console.error("Utilizator neautentificat!");
+                    return;
+                }
+
+                const token = await user.getIdToken();
+
+                const response = await fetch ("http://localhost:3000/tables", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Eroare: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                commit('setTables', data);
+
+            } catch (error) {
+                console.error("Eroare la preluarea meselor: ", error);
+                commit('setTables', []);
+            }
+        },
+
         async addReservation({ commit }, reservation) {
             try {
                 const user = auth.currentUser;
@@ -79,7 +120,39 @@ const store = createStore({
                 const data = await response.json();
                 commit('addReservation', data);
             } catch (error) {
-                console.error("Eroare la adăugarea rezervării:", error);
+                console.error("Eroare la adaugarea rezervarii:", error);
+            }
+        },
+
+        async addTable({ commit }, table) {
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    console.error("Utilizator neautentificat!");
+                    return;
+                }
+
+                const token = await user.getIdToken();
+
+                const response = await fetch ("http://localhost:3000/tables", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(table)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Eroare: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                commit('addTable', data);
+
+            } catch (error) {
+                console.error("Eroare la adaugarea mesei: ", error);
+                commit('addTable', []);
             }
         },
 
@@ -111,6 +184,35 @@ const store = createStore({
             }
         },
 
+        async deleteTable({ commit }, id) {
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    console.error("Utilizator neautentificat!");
+                    return;
+                }
+
+                const token = await user.getIdToken();
+
+                const response = await fetch (`http://localhost:3000/tables/${id}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Eroare: ${response.statusText}`);
+                }
+
+                commit('deleteTable', id);
+
+            } catch (error) {
+                console.error("Eroare la stergerea mesei: ", error);
+            }
+        },
+
         async updateReservation({ commit }, updatedReservation) {
             try {
                 const user = auth.currentUser;
@@ -136,12 +238,13 @@ const store = createStore({
 
                 commit('updateReservation', updatedReservation);
             } catch (error) {
-                console.error("Eroare la actualizarea rezervării:", error);
+                console.error("Eroare la actualizarea rezervarii:", error);
             }
         }
     },
     getters: {
-        allReservations: (state) => state.reservations
+        allReservations: (state) => state.reservations,
+        allTables: (state) => state.tables
     }
 });
 

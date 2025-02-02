@@ -17,12 +17,10 @@
                 </option>
             </select>
 
-            <input type="number" v-model="newReservation.peopleCount" placeholder="Numar persoane"
-                @blur="validatePeopleCount" required />
+            <input type="number" v-model="newReservation.peopleCount" placeholder="Numar persoane" @blur="validatePeopleCount" required />
             <p v-if="peopleError" class="error">{{ peopleError }}</p>
 
-            <input type="text" v-model="newReservation.phoneNumber" placeholder="Telefon" @blur="validatePhone"
-                required />
+            <input type="text" v-model="newReservation.phoneNumber" placeholder="Telefon" @blur="validatePhone" required />
             <p v-if="phoneError" class="error">{{ phoneError }}</p>
 
 
@@ -112,7 +110,7 @@ const searchedReservations = computed(() => {
     );
 });
 
-// Se calculeaza mesele disponibile îin funcțtie de data si ora selectata
+// Se calculeaza mesele disponibile in functie de data si ora selectata
 const availableTables = computed(() => {
     if (!newReservation.value.date || !newReservation.value.time) {
         // Daca nu s-a selectat inca o data si o ora, se returneaza toate mesele
@@ -161,7 +159,7 @@ const newReservation = ref({
 const tables = ref([]);
 
 onMounted(() => {
-    // La montarea componentei, preiau rezervarile deja existente
+    // La montarea componentei, se preiau rezervarile deja existente
     store.dispatch("fetchReservations");
 
     // Se genereaza mesele automat: primele 10 mese au 2 locuri, urmatoarele 10 au 4 locuri, urmatoarele 5 au 6 locuri ultimele 5 au 8 locuri
@@ -177,19 +175,19 @@ const nameError = ref("");
 const phoneError = ref("");
 const peopleError = ref("");
 
-// Functie de validare pentru nume
+// Validare pentru nume
 const validateName = () => {
     const regex = /^[A-Za-z\s]+$/;
     nameError.value = regex.test(newReservation.value.name) ? "" : "Numele trebuie sa contină doar litere.";
 };
 
-// Functie de validare pentru numarul de telefon
+// Validare pentru numarul de telefon
 const validatePhone = () => {
     const regex = /^[0-9]{10}$/;
     phoneError.value = regex.test(newReservation.value.phoneNumber) ? "" : "Numarul de telefon trebuie sa contină exact 10 cifre.";
 };
 
-// Functie de validare pentru numarul de persoane
+// Validare pentru numarul de persoane
 const validatePeopleCount = () => {
     if (!newReservation.value.table) return;
     const selectedTable = tables.value.find(t => t.name === newReservation.value.table);
@@ -282,6 +280,20 @@ select {
     padding: 0;
 }
 
+.reservation-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f4f4f4;
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.reservation-list li button {
+    margin: 0 5px;
+}
+
 .button-group {
     display: flex;
     justify-content: center;
@@ -324,20 +336,6 @@ select {
     width: 100%;
     border: 1px solid #ccc;
     border-radius: 5px;
-}
-
-.reservation-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #f4f4f4;
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 5px;
-}
-
-.reservation-list li button {
-    margin: 0 5px;
 }
 
 .button-container {
