@@ -76,9 +76,16 @@ const validateTableNumber = () => {
     const num = parseInt(newTable.value.tableNumber);
     if (isNaN(num) || num <= 0) {
         tableNumberError.value = "Numarul mesei trebuie sa fie un numar pozitiv!";
-    } else {
-        tableNumberError.value = "";
     }
+
+    // Verific daca numarul mesei există deja 
+    const tableExists = tables.value.some(table => table.tableNumber === num);
+    if (tableExists) {
+        tableNumberError.value = "Aceasta masa exista deja!";
+        return;
+    }
+
+    tableNumberError.value = "";
 };
 
 // Validare pentru numarul de locuri al unei mese
