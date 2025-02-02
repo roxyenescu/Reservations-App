@@ -4,7 +4,7 @@
         <!-- Formular pentru adaugarea unei noi rezervari sau pentru editarea unei rezervari existente -->
         <form @submit.prevent="isEditing ? updateReservation() : addReservation()" class="reservation-form">
             <input type="text" v-model="newReservation.name" placeholder="Nume" required />
-            <input type="date" v-model="newReservation.date" required />
+            <input type="date" v-model="newReservation.date" :min="today" required />
             <input type="time" v-model="newReservation.time" required />
             <input type="number" v-model="newReservation.table" placeholder="Numar masa" required />
             <input type="number" v-model="newReservation.peopleCount" placeholder="Numar persoane" required />
@@ -65,6 +65,9 @@ const store = useStore();
 const showModal = ref(false);
 const reservationToDelete = ref(null);
 
+// Obtin data de astazi in format YYYY-MM-DD
+const today = new Date().toISOString().split("T")[0];
+
 // Accesez rezervarile
 const reservations = computed(() => store.getters.allReservations);
 
@@ -79,8 +82,6 @@ const filteredReservations = computed(() => {
     let reservationsList = reservations.value;
 
     if (filterType.value === "today") {
-        // Obtin data de azi in format YYYY-MM-DD
-        const today = new Date().toISOString().split("T")[0];
         return reservations.value.filter(reservation => reservation.date === today);
     }
 
