@@ -72,6 +72,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useStore } from "vuex";
+import { auth } from "@/config/firebase"; 
 import ConfirmModal from "@/components/ModalDeleteReservation.vue";
 
 const store = useStore();
@@ -169,9 +170,19 @@ const newReservation = ref({
 // Preiau mesele din store
 const tables = computed(() => store.getters.allFormatedTables);
 
+// Se asteapta ca Firebase sa incarce utilizatorul inainte de a face request-uri (caz in care dam refresh)
+const isUserAuthenticated = ref(false);
 onMounted(() => {
-    store.dispatch("fetchReservations"); // Preiau reservarile existente din Vuex
-    store.dispatch("fetchTables"); // Preiau mesele existente din Vuex
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            isUserAuthenticated.value = true;
+            await store.dispatch("fetchReservations"); 
+            await store.dispatch("fetchTables");
+        } else {
+            isUserAuthenticated.value = false;
+            console.warn("Utilizator neautentificat");
+        }
+    });
 });
 
 

@@ -43,6 +43,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useStore } from 'vuex';
+import { auth } from "@/config/firebase"; 
 import ConfirmModal from "@/components/ModalDeleteTable.vue";
 
 const store = useStore();
@@ -60,9 +61,18 @@ const newTable = ref({
 const tableNumberError = ref("");
 const seatsError = ref("");
 
-// La montarea componentei, se preiau rezervarile deja existente
+// Se asteapta ca Firebase sa incarce utilizatorul inainte de a face request-uri (caz in care dam refresh)
+const isUserAuthenticated = ref(false);
 onMounted(() => {
-    store.dispatch("fetchTables");
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            isUserAuthenticated.value = true;
+            await store.dispatch("fetchTables");
+        } else {
+            isUserAuthenticated.value = false;
+            console.warn("Utilizator neautentificat");
+        }
+    });
 });
 
 // Obtin mesele din store si le sortez descrescator dupa numarul mesei
