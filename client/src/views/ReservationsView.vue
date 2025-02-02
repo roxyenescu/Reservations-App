@@ -6,7 +6,12 @@
             <input type="text" v-model="newReservation.name" placeholder="Nume" required />
             <input type="date" v-model="newReservation.date" :min="today" required />
             <input type="time" v-model="newReservation.time" required />
-            <input type="number" v-model="newReservation.table" placeholder="Numar masa" required />
+            <select v-model="newReservation.table" required>
+                <option disabled value="">Alege o masa...</option>
+                <option v-for="table in tables" :key="table.id" :value="table.name">
+                    {{ table.name }}
+                </option>
+            </select>
             <input type="number" v-model="newReservation.peopleCount" placeholder="Numar persoane" required />
             <input type="text" v-model="newReservation.phoneNumber" placeholder="Telefon" required />
 
@@ -122,9 +127,17 @@ const newReservation = ref({
     phoneNumber: ""
 });
 
-// La montarea componentei, preiau rezervarile deja existente
+const tables = ref([]);
+
 onMounted(() => {
+    // La montarea componentei, preiau rezervarile deja existente
     store.dispatch("fetchReservations");
+
+    // Se genereaza mesele automat: primele 10 mese au 2 locuri, urmatoarele 10 au 4 locuri, ultimele 10 au 6 locuri
+    tables.value = Array.from({ length: 30 }, (_, i) => {
+        const seats = i < 10 ? 2 : i < 20 ? 4 : i < 25 ? 6 : 8;
+        return { id: i + 1, name: `nr ${i + 1} - ${seats} locuri` };
+    });
 });
 
 // Functie pentru a adauga o rezervare
@@ -186,7 +199,7 @@ defineExpose({
     transform: translate(-50%);
 }
 
-.reservation-form input {
+.reservation-form input, select {
     display: block;
     width: 100%;
     padding: 10px;
