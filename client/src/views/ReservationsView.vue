@@ -44,10 +44,13 @@
                 <!-- Container pentru butoane -->
                 <div class="button-container">
                     <button class="edit-btn" @click="editReservation(reservation)">Editează</button>
-                    <button class="delete-btn" @click="deleteReservation(reservation.id)">Anuleaza</button>
+                    <button class="delete-btn" @click="openModal(reservation.id)">Anuleaza</button>
                 </div>
             </li>
         </ul>
+
+        <!-- Modal pentru confirmarea stergerii -->
+        <ConfirmModal :show="showModal" @confirm="confirmDelete" @close="showModal = false" />
 
     </div>
 </template>
@@ -55,8 +58,12 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useStore } from "vuex";
+import ConfirmModal from "@/components/ConfirmModal.vue";
 
 const store = useStore();
+
+const showModal = ref(false);
+const reservationToDelete = ref(null);
 
 // Accesez rezervarile
 const reservations = computed(() => store.getters.allReservations);
@@ -76,16 +83,31 @@ const filteredReservations = computed(() => {
         const today = new Date().toISOString().split("T")[0];
         return reservations.value.filter(reservation => reservation.date === today);
     }
-    
+
     return reservationsList.sort((a, b) => new Date(a.date) - new Date(b.date));
 });
 
-// Filtrare după nume
+// Filtrare dupa nume
+// ->  Daca o rezervare nu are nume definit, ea este ignorata în cautare, evitand astfel crash-ul aplicatiei.
 const searchedReservations = computed(() => {
     return filteredReservations.value.filter(reservation =>
-        reservation.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+        reservation?.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
     );
 });
+
+// Se deschide modalul si se stocheaza rezervarea care trebuie stearsa
+const openModal = (id) => {
+    reservationToDelete.value = id;
+    showModal.value = true;
+};
+
+// Functie pentru a sterge o rezervare dupa confirmarea stergerii
+const confirmDelete = async () => {
+    if (reservationToDelete.value) {
+        await store.dispatch("deleteReservation", reservationToDelete.value);
+    }
+    showModal.value = false;
+};
 
 const isEditing = ref(false);
 const editingId = ref(null);
@@ -114,11 +136,6 @@ const addReservation = async () => {
     resetForm();
 };
 
-// Functie pentru a sterge o rezervare
-const deleteReservation = async (id) => {
-    await store.dispatch("deleteReservation", id);
-};
-
 // Functie pentru a incepe editarea unei rezervări
 const editReservation = (reservation) => {
     isEditing.value = true;
@@ -145,6 +162,12 @@ const resetForm = () => {
         phoneNumber: ""
     };
 };
+
+// Expun variabilele pentru a evita warningurile Vue
+defineExpose({
+    showModal,
+    confirmDelete
+});
 </script>
 
 <style scoped>
