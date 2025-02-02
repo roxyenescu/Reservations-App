@@ -72,7 +72,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useStore } from "vuex";
-import ConfirmModal from "@/components/ConfirmModal.vue";
+import ConfirmModal from "@/components/ModalDeleteReservation.vue";
 
 const store = useStore();
 

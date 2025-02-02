@@ -30,18 +30,25 @@
 
                 <!-- Container pentru butoane -->
                 <div class="button-container">
-                    <button class="delete-btn" @click="deleteTable(table.id)">Anuleaza</button>
+                    <button class="delete-btn" @click="openModal(table.id)">Sterge</button>
                 </div>
             </li>
         </ul>
+
+        <!-- Modal pentru confirmarea stergerii -->
+        <ConfirmModal :show="showModal" @confirm="confirmDelete" @close="showModal = false" />
     </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useStore } from 'vuex';
+import ConfirmModal from "@/components/ModalDeleteTable.vue";
 
 const store = useStore();
+
+const showModal = ref(false);
+const tableToDelete = ref(null);
 
  // Stare pentru noua masa 
 const newTable = ref({
@@ -103,10 +110,18 @@ const addTable = async () => {
     resetForm();
 };
 
-// Functie pentru a sterge o masa
-const deleteTable = async (id) => {
-    await store.dispatch("deleteTable", id);
-    store.dispatch("fetchTables");
+// Se deschide modalul si se stocheaza masa care trebuie stearsa
+const openModal = (id) => {
+    tableToDelete.value = id;
+    showModal.value = true;
+};
+
+// Functie pentru a sterge o masa dupa confirmarea stergerii
+const confirmDelete = async () => {
+    if (tableToDelete.value) {
+        await store.dispatch("deleteTable", tableToDelete.value);
+    }
+    showModal.value = false;
 };
 
 // Functie pentru a reseta formularul
