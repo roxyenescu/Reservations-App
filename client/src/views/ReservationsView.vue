@@ -25,13 +25,16 @@
             <button @click="filterType = 'today'">Rezervarile de astazi</button>
         </div>
 
-        <div v-if="filteredReservations.length === 0" class="no-reservations">
+        <!-- Camp pentru cautare -->
+        <input type="text" v-model="searchQuery" placeholder="Cauta rezervare dupa nume..." class="search-bar">
+
+        <div v-if="searchedReservations.length === 0" class="no-reservations">
             <p>Nu exista rezervari inca.</p>
         </div>
 
         <!-- Lista rezervarilor -->
         <ul v-else class="reservation-list">
-            <li v-for="reservation in filteredReservations" :key="reservation.id">
+            <li v-for="reservation in searchedReservations" :key="reservation.id">
                 <span>
                     {{ reservation.name }}:
                     {{ reservation.date }} la {{ reservation.time }} |
@@ -58,8 +61,11 @@ const store = useStore();
 // Accesez rezervarile
 const reservations = computed(() => store.getters.allReservations);
 
-// Inițial, apar toate rezervarile
+// Initial, apar toate rezervarile
 const filterType = ref("all");
+
+// Initial, bara de cautare este goala
+const searchQuery = ref("");
 
 // Filtrare rezervari pe baza 'filterType'
 const filteredReservations = computed(() => {
@@ -69,6 +75,13 @@ const filteredReservations = computed(() => {
         return reservations.value.filter(reservation => reservation.date === today);
     }
     return reservations.value;
+});
+
+// Filtrare după nume
+const searchedReservations = computed(() => {
+    return filteredReservations.value.filter(reservation =>
+        reservation.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
 });
 
 const isEditing = ref(false);
@@ -185,6 +198,14 @@ const resetForm = () => {
 
 .filter-buttons button:hover {
     background-color: #368f6a;
+}
+
+.search-bar {
+    margin-top: 15px;
+    padding: 10px;
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 5px;
 }
 
 .reservation-list li {
