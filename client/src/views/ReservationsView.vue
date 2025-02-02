@@ -3,17 +3,28 @@
         <h1>Adauga o noua rezervare:</h1>
         <!-- Formular pentru adaugarea unei noi rezervari sau pentru editarea unei rezervari existente -->
         <form @submit.prevent="isEditing ? updateReservation() : addReservation()" class="reservation-form">
-            <input type="text" v-model="newReservation.name" placeholder="Nume" required />
+            <input type="text" v-model="newReservation.name" placeholder="Nume" @blur="validateName" required />
+            <p v-if="nameError" class="error">{{ nameError }}</p>
+
             <input type="date" v-model="newReservation.date" :min="today" required />
+
             <input type="time" v-model="newReservation.time" required />
-            <select v-model="newReservation.table" required>
+
+            <select v-model="newReservation.table" required @change="validatePeopleCount">
                 <option disabled value="">Alege o masa...</option>
                 <option v-for="table in availableTables" :key="table.id" :value="table.name">
                     {{ table.name }}
                 </option>
             </select>
-            <input type="number" v-model="newReservation.peopleCount" placeholder="Numar persoane" required />
-            <input type="text" v-model="newReservation.phoneNumber" placeholder="Telefon" required />
+
+            <input type="number" v-model="newReservation.peopleCount" placeholder="Numar persoane"
+                @blur="validatePeopleCount" required />
+            <p v-if="peopleError" class="error">{{ peopleError }}</p>
+
+            <input type="text" v-model="newReservation.phoneNumber" placeholder="Telefon" @blur="validatePhone"
+                required />
+            <p v-if="phoneError" class="error">{{ phoneError }}</p>
+
 
             <!-- Butoane pentru adaugare/actualizare rezervare -->
             <div class="button-group">
@@ -160,11 +171,50 @@ onMounted(() => {
     });
 });
 
+
+// Variabile pentru validare
+const nameError = ref("");
+const phoneError = ref("");
+const peopleError = ref("");
+
+// Functie de validare pentru nume
+const validateName = () => {
+    const regex = /^[A-Za-z\s]+$/;
+    nameError.value = regex.test(newReservation.value.name) ? "" : "Numele trebuie sa contină doar litere.";
+};
+
+// Functie de validare pentru numarul de telefon
+const validatePhone = () => {
+    const regex = /^[0-9]{10}$/;
+    phoneError.value = regex.test(newReservation.value.phoneNumber) ? "" : "Numarul de telefon trebuie sa contină exact 10 cifre.";
+};
+
+// Functie de validare pentru numarul de persoane
+const validatePeopleCount = () => {
+    if (!newReservation.value.table) return;
+    const selectedTable = tables.value.find(t => t.name === newReservation.value.table);
+    const maxSeats = selectedTable ? parseInt(selectedTable.name.match(/\d+ locuri/)[0]) : 0;
+
+    peopleError.value = newReservation.value.peopleCount > maxSeats
+        ? `Aceasta masa are doar ${maxSeats} locuri disponibile.`
+        : "";
+};
+
+// Functie care valideaza toate campurile inainte de trimiterea formularului
+const validateForm = () => {
+    validateName();
+    validatePhone();
+    validatePeopleCount();
+
+    return !nameError.value && !phoneError.value && !peopleError.value;
+};
+
 // Functie pentru a adauga o rezervare
 const addReservation = async () => {
-    await store.dispatch("addReservation", newReservation.value);
+    // Se opreste trimiterea formularului daca exista erori
+    if (!validateForm()) return;
 
-    // Reimprospatez lista dupa ce se adauga o noua rezervare 
+    await store.dispatch("addReservation", newReservation.value);
     await store.dispatch("fetchReservations");
 
     resetForm();
@@ -259,6 +309,13 @@ select {
 
 .filter-buttons button:hover {
     background-color: #368f6a;
+}
+
+.error {
+    color: red;
+    font-size: 14px;
+    margin-top: -10px;
+    margin-bottom: 10px;
 }
 
 .search-bar {
