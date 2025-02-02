@@ -67,14 +67,17 @@ const filterType = ref("all");
 // Initial, bara de cautare este goala
 const searchQuery = ref("");
 
-// Filtrare rezervari pe baza 'filterType'
+// Filtrare rezervari pe baza 'filterType' dupa data
 const filteredReservations = computed(() => {
+    let reservationsList = reservations.value;
+
     if (filterType.value === "today") {
         // Obtin data de azi in format YYYY-MM-DD
         const today = new Date().toISOString().split("T")[0];
         return reservations.value.filter(reservation => reservation.date === today);
     }
-    return reservations.value;
+    
+    return reservationsList.sort((a, b) => new Date(a.date) - new Date(b.date));
 });
 
 // Filtrare după nume
