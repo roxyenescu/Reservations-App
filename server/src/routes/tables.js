@@ -9,6 +9,16 @@ router.post("/", authMiddleware, async (req, res) => {
     try {
         const { tableNumber, seats } = req.body;
 
+        // Validare: Numarul mesei trebuie sa fie un numar pozitiv
+        if (!Number.isInteger(tableNumber) || tableNumber <= 0) {
+            return res.status(400).json({ error: "Numarul mesei trebuie sa fie un numar pozitiv!" });
+        }
+
+        // Validare: Numarul de locuri trebuie sa fie intre 1 si 200
+        if (!Number.isInteger(seats) || seats < 1 || seats > 200) {
+            return res.status(400).json({ error: "Numarul de locuri trebuie sa fie intre 1 si 200!" });
+        }
+
         // Verific daca exista deja aceasta masa
         const existingTables = await db.collection("tables")
             .where("tableNumber", "==", tableNumber)
@@ -39,31 +49,6 @@ router.get("/", authMiddleware, async (req, res) => {
         res.status(200).json(tables);
     } catch (error) {
         res.status(500).json({ error: "Eroare la preluarea meselor!", details: error });
-    }
-});
-
-// Actualizarea unei mese (protejat)
-router.put("/:id", authMiddleware, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { tableNumber, seats } = req.body;
-
-        const tableRef = db.collection("tables").doc(id);
-        const doc = await tableRef.get();
-
-        if (!doc.exists || doc.data().createdBy !== req.user.uid) {
-            return res.status(404).json({ error: "Masa nu a fost gasita sau nu apartine utilizatorului!" });
-        }
-
-        await tableRef.update({
-            tableNumber,
-            seats,
-            updatedAt: new Date().toISOString(),
-        });
-
-        res.status(200).json({ message: "Masa a fost actualizata!" });
-    } catch (error) {
-        res.status(500).json({ error: "Eroare la actualizarea mesei!", details: error });
     }
 });
 
