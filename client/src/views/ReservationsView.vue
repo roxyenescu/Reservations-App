@@ -17,10 +17,12 @@
                 </option>
             </select>
 
-            <input type="number" v-model="newReservation.peopleCount" placeholder="Numar persoane" @blur="validatePeopleCount" required />
+            <input type="number" v-model="newReservation.peopleCount" placeholder="Numar persoane"
+                @blur="validatePeopleCount" required />
             <p v-if="peopleError" class="error">{{ peopleError }}</p>
 
-            <input type="text" v-model="newReservation.phoneNumber" placeholder="Telefon" @blur="validatePhone" required />
+            <input type="text" v-model="newReservation.phoneNumber" placeholder="Telefon" @blur="validatePhone"
+                required />
             <p v-if="phoneError" class="error">{{ phoneError }}</p>
 
 
@@ -72,7 +74,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useStore } from "vuex";
-import { auth } from "@/config/firebase"; 
+import { auth } from "@/config/firebase";
 import ConfirmModal from "@/components/ModalDeleteReservation.vue";
 
 const store = useStore();
@@ -114,12 +116,16 @@ const searchedReservations = computed(() => {
 // Se calculeaza mesele disponibile in functie de data si ora selectata
 const availableTables = computed(() => {
     if (!newReservation.value.date || !newReservation.value.time) {
-         // Daca nu s-a selectat inca o data si o ora, se returneaza toate mesele
-        return tables.value;
+        // Sortează mesele descrescător după numărul mesei
+        return tables.value.slice().sort((a, b) => {
+            const numA = parseInt(a.name.match(/\d+/)[0]);
+            const numB = parseInt(b.name.match(/\d+/)[0]);
+            return numB - numA; // Sortare descrescatoare
+        });
     }
 
     let filteredTables = tables.value.filter(table => {
-        // Se verifica daca aceasta masa este deja rezervata pentru data si ora selectata
+        // Se verifica daca masa este deja rezervata pentru data si ora selectata
         const isTaken = reservations.value.some(reservation =>
             reservation.date === newReservation.value.date &&
             reservation.time === newReservation.value.time &&
@@ -129,7 +135,14 @@ const availableTables = computed(() => {
         return !isTaken;
     });
 
-    // Se adauga manual masa rezervarii in cazul in care suntem in cazul de editare
+    // Se sortează mesele disponibile descrescator
+    filteredTables.sort((a, b) => {
+        const numA = parseInt(a.name.match(/\d+/)[0]);
+        const numB = parseInt(b.name.match(/\d+/)[0]);
+        return numB - numA;
+    });
+
+    // Se adauga manual masa rezervarii daca suntem in modul editare
     if (isEditing.value) {
         const currentTable = tables.value.find(t => t.name === newReservation.value.table);
         if (currentTable && !filteredTables.includes(currentTable)) {
@@ -176,7 +189,7 @@ onMounted(() => {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             isUserAuthenticated.value = true;
-            await store.dispatch("fetchReservations"); 
+            await store.dispatch("fetchReservations");
             await store.dispatch("fetchTables");
         } else {
             isUserAuthenticated.value = false;
@@ -257,8 +270,14 @@ const editReservation = (reservation) => {
 
 // Functie pentru a actualiza o rezervare
 const updateReservation = async () => {
-    await store.dispatch("updateReservation", newReservation.value);
-    resetForm();
+    const updatedReservation = { ...newReservation.value, id: editingId.value };
+
+    try {
+        await store.dispatch("updateReservation", updatedReservation);
+        resetForm();
+    } catch (error) {
+        console.error("Eroare la actualizarea rezervării:", error);
+    }
 };
 
 // Functie pentru a anula editarea
