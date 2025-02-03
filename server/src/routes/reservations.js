@@ -35,7 +35,7 @@ router.post("/", authMiddleware, async (req, res) => {
     try {
         const { name, date, time, table, peopleCount, phoneNumber } = req.body;
 
-        // Validări
+        // Validari
         if (!name || !date || !time || !table || !peopleCount || !phoneNumber) {
             return res.status(400).json({ error: "Toate campurile sunt obligatorii!" });
         }
@@ -159,5 +159,34 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         res.status(500).json({ error: "Eroare la stergerea rezervarii!", details: error });
     }
 });
+
+// Functie pentru a sterge rezervarile care au trecut
+const deleteExpiredReservations = async () => {
+    try {
+        const today = new Date().toISOString().split("T")[0];
+
+        const snapshot = await db.collection("reservations")
+            .where("date", "<", today)
+            .get();
+
+        const batch = db.batch();
+        snapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        console.log("Rezervarile expirate au fost sterse cu succes.");
+    } catch (error) {
+        console.error("Eroare la ștergerea rezervarilor expirate:", error);
+    }
+};
+
+// Se ruleaza stergerea automata zilnic la ora 00:00
+setInterval(() => {
+    const now = new Date();
+    if (now.getHours() === 0 && now.getMinutes() === 0) {
+        deleteExpiredReservations();
+    }
+}, 60 * 1000); // Se verifica la fiecare minut daca s-a ajuns la miezul noptii
 
 module.exports = router;
