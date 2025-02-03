@@ -8,7 +8,7 @@ const store = createStore({
     },
     mutations: {
         setReservations(state, reservations) {
-            state.reservations = reservations || []; 
+            state.reservations = reservations || [];
         },
         addReservation(state, reservation) {
             state.reservations.push(reservation);
@@ -73,7 +73,7 @@ const store = createStore({
 
                 const token = await user.getIdToken();
 
-                const response = await fetch ("http://localhost:3000/tables", {
+                const response = await fetch("http://localhost:3000/tables", {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${token}`,
@@ -104,21 +104,23 @@ const store = createStore({
 
                 const token = await user.getIdToken();
 
+                console.log("Trimit datele catre server:", reservation);
+
                 const response = await fetch("http://localhost:3000/reservations", {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${token}`,
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify(reservation)
+                    body: JSON.stringify({ ...reservation, history: [] })
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Eroare: ${response.statusText}`);
+                    throw new Error(`Eroare: ${responseData.error || response.statusText}`);
                 }
 
-                const data = await response.json();
-                commit('addReservation', data);
+                const responseData = await response.json();
+                commit('addReservation', responseData);
             } catch (error) {
                 console.error("Eroare la adaugarea rezervarii:", error);
             }
@@ -134,7 +136,7 @@ const store = createStore({
 
                 const token = await user.getIdToken();
 
-                const response = await fetch ("http://localhost:3000/tables", {
+                const response = await fetch("http://localhost:3000/tables", {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${token}`,
@@ -194,7 +196,7 @@ const store = createStore({
 
                 const token = await user.getIdToken();
 
-                const response = await fetch (`http://localhost:3000/tables/${id}`, {
+                const response = await fetch(`http://localhost:3000/tables/${id}`, {
                     method: "DELETE",
                     headers: {
                         "Authorization": `Bearer ${token}`,
@@ -223,6 +225,7 @@ const store = createStore({
 
                 const token = await user.getIdToken();
 
+                // Trimit update direct la backend, fără GET înainte
                 const response = await fetch(`http://localhost:3000/reservations/${updatedReservation.id}`, {
                     method: "PUT",
                     headers: {
@@ -233,14 +236,16 @@ const store = createStore({
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Eroare: ${response.statusText}`);
+                    throw new Error(`Eroare la actualizarea rezervării: ${response.statusText}`);
                 }
 
-                commit('updateReservation', updatedReservation);
+                const data = await response.json();
+                commit('updateReservation', data.updatedData);
             } catch (error) {
-                console.error("Eroare la actualizarea rezervarii:", error);
+                console.error("Eroare la actualizarea rezervării:", error);
             }
-        }
+        },
+
     },
     getters: {
         allReservations: (state) => state.reservations,

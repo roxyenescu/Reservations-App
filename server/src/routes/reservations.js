@@ -10,15 +10,6 @@ const isValidName = (name) => /^[A-Za-z\s]+$/.test(name);
 // Functie pentru validarea numarului de telefon (exact 10 cifre)
 const isValidPhoneNumber = (phoneNumber) => /^[0-9]{10}$/.test(phoneNumber);
 
-// Functie pentru verificarea capacitatii mesei
-const isPeopleCountValid = async (table, peopleCount) => {
-    const snapshot = await db.collection("tables").where("tableNumber", "==", table).get();
-    if (snapshot.empty) return false;
-
-    const tableData = snapshot.docs[0].data();
-    return peopleCount <= tableData.seats;
-};
-
 // Functie pentru verificarea existentei rezervarilor duplicate
 const isDuplicateReservation = async (table, date, time) => {
     const snapshot = await db.collection("reservations")
@@ -30,7 +21,7 @@ const isDuplicateReservation = async (table, date, time) => {
     return !snapshot.empty;
 };
 
-// Adaugarea unei rezervari (protejat)
+// Adaugarea unei rezervari 
 router.post("/", authMiddleware, async (req, res) => {
     try {
         const { name, date, time, table, peopleCount, phoneNumber } = req.body;
@@ -48,11 +39,6 @@ router.post("/", authMiddleware, async (req, res) => {
             return res.status(400).json({ error: "Numarul de telefon trebuie sa contină exact 10 cifre!" });
         }
 
-        const validCapacity = await isPeopleCountValid(table, peopleCount);
-        if (!validCapacity) {
-            return res.status(400).json({ error: "Numarul de persoane depaseste capacitatea mesei!" });
-        }
-
         const duplicate = await isDuplicateReservation(table, date, time);
         if (duplicate) {
             return res.status(400).json({ error: "Aceasta masa este deja rezervata la această data si ora!" });
@@ -67,6 +53,7 @@ router.post("/", authMiddleware, async (req, res) => {
             peopleCount,
             phoneNumber,
             createdAt: new Date().toISOString(),
+            history: [] // Vector gol pentru istoricul rezervarii
         });
 
         res.status(201).json({ id: docRef.id, message: "Rezervare adaugata!" });
@@ -75,7 +62,7 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 });
 
-// Obtinerea tuturor rezervarilor (protejat)
+// Obtinerea tuturor rezervarilor 
 router.get("/", authMiddleware, async (req, res) => {
     try {
         const snapshot = await db.collection("reservations").where("userId", "==", req.user.uid).get();
@@ -87,56 +74,51 @@ router.get("/", authMiddleware, async (req, res) => {
     }
 });
 
-// Actualizarea unei rezervari (protejat)
+// Actualizarea unei rezervari
 router.put("/:id", authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, date, time, table, peopleCount, phoneNumber } = req.body;
 
-        // Verific daca rezervarea exista
+        // Verific dacă rezervarea există
         const reservationRef = db.collection("reservations").doc(id);
         const doc = await reservationRef.get();
 
         if (!doc.exists || doc.data().userId !== req.user.uid) {
-            return res.status(404).json({ error: "Rezervarea nu a fost gasita sau nu apartine utilizatorului!" });
+            return res.status(404).json({ error: "Rezervarea nu a fost găsită sau nu aparține utilizatorului!" });
         }
 
-        // Validări
-        if (!name || !date || !time || !table || !peopleCount || !phoneNumber) {
-            return res.status(400).json({ error: "Toate campurile sunt obligatorii!" });
-        }
+        const existingReservation = doc.data();
 
-        if (!isValidName(name)) {
-            return res.status(400).json({ error: "Numele trebuie sa contină doar litere si spatii!" });
-        }
+        // Eliminăm istoricul anterior din `previousState`
+        const { history, ...reservationWithoutHistory } = existingReservation;
 
-        if (!isValidPhoneNumber(phoneNumber)) {
-            return res.status(400).json({ error: "Numarul de telefon trebuie sa contină exact 10 cifre!" });
-        }
+        // Construim istoricul corect (fără istoricul anterior inclus)
+        const newHistoryEntry = {
+            updatedAt: new Date().toISOString(),
+            previousState: reservationWithoutHistory // Păstrăm doar valorile fără history
+        };
 
-        const validCapacity = await isPeopleCountValid(table, peopleCount);
-        if (!validCapacity) {
-            return res.status(400).json({ error: "Numarul de persoane depaseste capacitatea mesei!" });
-        }
-
-        const duplicate = await isDuplicateReservation(table, date, time);
-        if (duplicate) {
-            return res.status(400).json({ error: "Aceasta masa este deja rezervata la această data si ora!" });
-        }
-
-        await reservationRef.update({
+        // Construim datele pentru actualizare
+        const updatedData = {
             name,
             date,
             time,
             table,
             peopleCount,
             phoneNumber,
-            updatedAt: new Date().toISOString(),
-        });
+            history: existingReservation.history
+                ? [...existingReservation.history, newHistoryEntry]
+                : [newHistoryEntry],
+            updatedAt: new Date().toISOString()
+        };
 
-        res.status(200).json({ message: "Rezervare actualizata!" });
+        await reservationRef.update(updatedData);
+
+        res.status(200).json({ message: "Rezervare actualizată!", updatedData });
     } catch (error) {
-        res.status(500).json({ error: "Eroare la actualizarea rezervarii!", details: error });
+        console.error("Eroare la actualizarea rezervării:", error);
+        res.status(500).json({ error: "Eroare la actualizarea rezervării!", details: error.message });
     }
 });
 
@@ -188,5 +170,10 @@ setInterval(() => {
         deleteExpiredReservations();
     }
 }, 60 * 1000); // Se verifica la fiecare minut daca s-a ajuns la miezul noptii
+
+
+
+
+
 
 module.exports = router;

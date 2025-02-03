@@ -49,20 +49,32 @@
         </div>
 
         <!-- Lista rezervarilor -->
-        <ul v-else class="reservation-list">
-            <li v-for="reservation in searchedReservations" :key="reservation.id">
-                <span>
-                    {{ reservation.name }}:
-                    {{ reservation.date }} la {{ reservation.time }} |
-                    {{ reservation.table }} | {{ reservation.peopleCount }} persoane
-                </span>
+        <ul v-if="searchedReservations.length > 0" class="reservation-list">
+            <template v-for="reservation in searchedReservations" :key="reservation.id">
+                <li class="reservation-item">
+                    <span>
+                        {{ reservation.name }}: {{ reservation.date }} la {{ reservation.time }} |
+                        {{ reservation.table }} | {{ reservation.peopleCount }} persoane
+                    </span>
+                    <div class="button-container">
+                        <button class="edit-btn" @click="editReservation(reservation)">Editează</button>
+                        <button class="delete-btn" @click="openModal(reservation.id)">Anuleaza</button>
+                        <button class="history-btn" @click="toggleHistory(reservation.id)">Istoric</button>
+                    </div>
+                </li>
 
-                <!-- Container pentru butoane -->
-                <div class="button-container">
-                    <button class="edit-btn" @click="editReservation(reservation)">Editează</button>
-                    <button class="delete-btn" @click="openModal(reservation.id)">Anuleaza</button>
-                </div>
-            </li>
+                <li v-if="expandedHistory === reservation.id" class="history-container">
+                    <ul v-if="reservation.history && reservation.history.length > 0">
+                        <li v-for="(entry, index) in reservation.history" :key="index" class="history-item">
+                            Modificat la: {{ formatDate(entry.updatedAt) }} |
+                            {{ entry.previousState?.name || 'N/A' }}: {{ entry.previousState?.date || 'N/A' }} |
+                            {{ entry.previousState?.table || 'N/A' }} | {{ entry.previousState?.peopleCount || 'N/A' }}
+                            persoane
+                        </li>
+                    </ul>
+                    <p v-else>Nu exista modificari anterioare.</p>
+                </li>
+            </template>
         </ul>
 
         <!-- Modal pentru confirmarea stergerii -->
@@ -81,20 +93,40 @@ const store = useStore();
 
 const showModal = ref(false);
 const reservationToDelete = ref(null);
+const today = new Date().toISOString().split("T")[0]; // Obtin data de astazi in format YYYY-MM-DD
+const filterType = ref("all"); // Initial, apar toate rezervarile
+const searchQuery = ref(""); // Initial, bara de cautare este goala
+const isEditing = ref(false);
+const editingId = ref(null);
+const expandedHistory = ref(null);
 
-// Obtin data de astazi in format YYYY-MM-DD
-const today = new Date().toISOString().split("T")[0];
+const newReservation = ref({
+    name: "",
+    date: "",
+    time: "",
+    table: "",
+    peopleCount: "",
+    phoneNumber: ""
+});
 
-// Accesez rezervarile
-const reservations = computed(() => store.getters.allReservations);
+// Functie pentru a reseta formularul
+const resetForm = () => {
+    isEditing.value = false;
+    editingId.value = null;
+    newReservation.value = {
+        name: "",
+        date: "",
+        time: "",
+        table: "",
+        peopleCount: "",
+        phoneNumber: ""
+    };
+};
 
-// Initial, apar toate rezervarile
-const filterType = ref("all");
+const reservations = computed(() => store.getters.allReservations); // Accesez rezervarile din store
+const tables = computed(() => store.getters.allFormatedTables); // Accesez mesele din store
 
-// Initial, bara de cautare este goala
-const searchQuery = ref("");
-
-// Filtrare rezervari pe baza 'filterType' dupa data
+// Filtrare rezervari pe baza 'filterType' dupa data pentru cele doua butoane de filtrare
 const filteredReservations = computed(() => {
     let reservationsList = reservations.value;
 
@@ -105,18 +137,17 @@ const filteredReservations = computed(() => {
     return reservationsList.sort((a, b) => new Date(a.date) - new Date(b.date));
 });
 
-// Filtrare dupa nume
-// ->  Daca o rezervare nu are nume definit, ea este ignorata in cautare, evitand astfel crash-ul aplicatiei.
+// Filtrare dupa nume pentru bara de cautare
 const searchedReservations = computed(() => {
     return filteredReservations.value.filter(reservation =>
         reservation?.name?.toLowerCase().includes(searchQuery.value.toLowerCase())
     );
 });
 
-// Se calculeaza mesele disponibile in functie de data si ora selectata
+// Se cauta mesele disponibile in functie de data si ora selectata (o masa nu poate fi folosita la aceeasi data si ora de mai multe ori)
 const availableTables = computed(() => {
     if (!newReservation.value.date || !newReservation.value.time) {
-        // Sortează mesele descrescător după numărul mesei
+        // Sorteaza mesele descrescator dupa numarul mesei
         return tables.value.slice().sort((a, b) => {
             const numA = parseInt(a.name.match(/\d+/)[0]);
             const numB = parseInt(b.name.match(/\d+/)[0]);
@@ -135,7 +166,7 @@ const availableTables = computed(() => {
         return !isTaken;
     });
 
-    // Se sortează mesele disponibile descrescator
+    // Se sorteaza mesele disponibile descrescator
     filteredTables.sort((a, b) => {
         const numA = parseInt(a.name.match(/\d+/)[0]);
         const numB = parseInt(b.name.match(/\d+/)[0]);
@@ -167,36 +198,6 @@ const confirmDelete = async () => {
     }
     showModal.value = false;
 };
-
-const isEditing = ref(false);
-const editingId = ref(null);
-
-const newReservation = ref({
-    name: "",
-    date: "",
-    time: "",
-    table: "",
-    peopleCount: "",
-    phoneNumber: ""
-});
-
-// Preiau mesele din store
-const tables = computed(() => store.getters.allFormatedTables);
-
-// Se asteapta ca Firebase sa incarce utilizatorul inainte de a face request-uri (caz in care dam refresh)
-const isUserAuthenticated = ref(false);
-onMounted(() => {
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            isUserAuthenticated.value = true;
-            await store.dispatch("fetchReservations");
-            await store.dispatch("fetchTables");
-        } else {
-            isUserAuthenticated.value = false;
-            console.warn("Utilizator neautentificat");
-        }
-    });
-});
 
 
 // Variabile pentru validare
@@ -241,13 +242,30 @@ const addReservation = async () => {
     // Se opreste trimiterea formularului daca exista erori
     if (!validateForm()) return;
 
-    await store.dispatch("addReservation", newReservation.value);
-    await store.dispatch("fetchReservations");
+    const reservationData = { ...newReservation.value, history: [] };
 
-    resetForm();
+    console.log("Trimitere rezervare:", reservationData); // Debugging
+
+    try {
+        await store.dispatch("addReservation", reservationData);
+        await store.dispatch("fetchReservations");
+        resetForm();
+    } catch (error) {
+        console.error("Eroare la adaugarea rezervarii:", error);
+    }
 };
 
-// Functie pentru a incepe editarea unei rezervari
+const toggleHistory = (id) => {
+    expandedHistory.value = expandedHistory.value === id ? null : id;
+};
+
+// Functie de formatare data modificata
+const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleString("ro-RO", { dateStyle: "short", timeStyle: "short" });
+};
+
+// Functie pentru a popula field-urile cu datele rezervarii ce se doreste a fi editata
 const editReservation = (reservation) => {
     isEditing.value = true;
     editingId.value = reservation.id;
@@ -261,43 +279,53 @@ const editReservation = (reservation) => {
         time: reservation.time,
         table: selectedTable ? selectedTable.name : reservation.table, // Se asigura ca apare in field
         peopleCount: reservation.peopleCount,
-        phoneNumber: reservation.phoneNumber
+        phoneNumber: reservation.phoneNumber,
+        history: reservation.history || [] 
     };
 
-    console.log("Masa setată:", newReservation.value.table);
+    console.log("Masa setata:", newReservation.value.table);
 };
 
-
-// Functie pentru a actualiza o rezervare
+// Functie de actualizare a datelor
 const updateReservation = async () => {
-    const updatedReservation = { ...newReservation.value, id: editingId.value };
+    if (!validateForm()) return;
+
+    const updatedReservation = {
+        ...newReservation.value,
+        id: editingId.value,
+        table: newReservation.value.table
+        // table: newReservation.value.table.match(/\d+/)[0] // Extragem numarul mesei corect
+    };
 
     try {
         await store.dispatch("updateReservation", updatedReservation);
+        await store.dispatch("fetchReservations"); // Actualizez lista rezervarilor
         resetForm();
     } catch (error) {
         console.error("Eroare la actualizarea rezervării:", error);
     }
 };
 
+
 // Functie pentru a anula editarea
 const cancelEdit = () => {
     resetForm();
 };
 
-// Functie pentru a reseta formularul
-const resetForm = () => {
-    isEditing.value = false;
-    editingId.value = null;
-    newReservation.value = {
-        name: "",
-        date: "",
-        time: "",
-        table: "",
-        peopleCount: "",
-        phoneNumber: ""
-    };
-};
+// Se asteapta ca Firebase sa incarce utilizatorul inainte de a face request-uri (caz in care dam refresh)
+const isUserAuthenticated = ref(false);
+onMounted(() => {
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            isUserAuthenticated.value = true;
+            await store.dispatch("fetchReservations");
+            await store.dispatch("fetchTables");
+        } else {
+            isUserAuthenticated.value = false;
+            console.warn("Utilizator neautentificat");
+        }
+    });
+});
 
 // Expun variabilele pentru a evita warningurile Vue
 defineExpose({
@@ -419,5 +447,49 @@ button {
 button:hover {
     opacity: 0.8;
     background-color: darkred;
+}
+
+.history-container {
+    background-color: #9de3e7;
+    border: 1px solid #9de3e7;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.history-item {
+    background: #9de3e7;
+    padding: 5px;
+    border-bottom: 1px solid #ccc;
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.history-btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.history-btn:hover {
+    background-color: #2980b9;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.5s;
+}
+
+.fade-enter,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>
